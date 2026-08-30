@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Annotated, TypeAlias
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
@@ -20,7 +20,7 @@ class LeadClassification(StrEnum):
     COLD = "COLD"
 
 
-FactValue: TypeAlias = str | int | float | bool | list[str] | None
+type FactValue = str | int | float | bool | list[str] | None
 
 
 class Evidence(BaseModel):
@@ -34,9 +34,7 @@ class Evidence(BaseModel):
     excerpt: str | None = Field(default=None, max_length=5_000)
     relevance: float = Field(ge=0, le=1)
     reliability: float = Field(ge=0, le=1)
-    retrieved_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     content_digest: str | None = Field(default=None, max_length=64)
 
 
