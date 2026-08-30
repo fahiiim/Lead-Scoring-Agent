@@ -18,7 +18,6 @@ from app.schemas.lead import LeadInput
 from app.utils.cache import Cache
 from app.utils.urls import UrlValidator, canonicalize_url, validate_public_url
 
-
 _USEFUL_SEGMENTS = (
     "about",
     "about-us",
@@ -171,7 +170,9 @@ class WebsiteResearchProvider:
         while pending and len(documents) < min(budget.max_pages, budget.max_sources):
             url = pending.pop(0)
             canonical = canonicalize_url(url)
-            if canonical in seen or not robots.can_fetch(self._settings.outbound_user_agent, canonical):
+            if canonical in seen or not robots.can_fetch(
+                self._settings.outbound_user_agent, canonical
+            ):
                 continue
             seen.add(canonical)
             if documents and self._settings.website_rate_limit_seconds:
@@ -201,9 +202,7 @@ class WebsiteResearchProvider:
                     link for link in _rank_useful_links(links, root_url) if link not in seen
                 )
                 if len(pending) < budget.max_pages:
-                    pending.extend(
-                        urljoin(root_url, segment) for segment in _USEFUL_SEGMENTS
-                    )
+                    pending.extend(urljoin(root_url, segment) for segment in _USEFUL_SEGMENTS)
         return documents
 
     async def _load_robots(self, root_url: str) -> RobotFileParser:
@@ -247,7 +246,11 @@ def _rank_useful_links(links: Iterable[str], root_url: str) -> list[str]:
         seen.add(canonical)
         path = parts.path.casefold()
         score = next(
-            (len(_USEFUL_SEGMENTS) - index for index, item in enumerate(_USEFUL_SEGMENTS) if item in path),
+            (
+                len(_USEFUL_SEGMENTS) - index
+                for index, item in enumerate(_USEFUL_SEGMENTS)
+                if item in path
+            ),
             0,
         )
         if score:
