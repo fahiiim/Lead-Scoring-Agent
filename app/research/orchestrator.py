@@ -8,6 +8,7 @@ import re
 from time import monotonic
 
 from app.core.config import Settings
+from app.core.exceptions import ApplicationError
 from app.models.domain import Evidence, ResearchBundle, ResearchDocument
 from app.research.base import ResearchBudget, ResearchProvider
 from app.schemas.lead import LeadInput
@@ -43,7 +44,7 @@ class ResearchOrchestrator:
             max_steps=self._settings.max_research_steps,
         )
         documents: list[ResearchDocument] = []
-        failures: list[str] = []
+        failures = _configuration_warnings(self._settings)
         seen_urls: set[str] = set()
         started = monotonic()
 
@@ -61,7 +62,10 @@ class ResearchOrchestrator:
                             "Research provider failed",
                             extra={"provider": provider.name, "error_type": type(exc).__name__},
                         )
-                        failures.append(f"{provider.name} was unavailable.")
+                        if isinstance(exc, ApplicationError):
+                            failures.append(f"{provider.name}: {exc.message}")
+                        else:
+                            failures.append(f"{provider.name} was unavailable.")
                         continue
                     for document in provider_documents:
                         canonical = canonicalize_url(str(document.url))
@@ -146,3 +150,9 @@ def _has_sufficient_evidence(documents: list[ResearchDocument]) -> bool:
     has_official = "company_website" in source_types
     has_public = bool(source_types & {"public_encyclopedia", "government_filing"})
     return len(documents) >= 5 and has_official and has_public
+
+
+def _configuration_warnings(settings: Settings) -> list[str]:
+    if settings.search_provider.casefold() in {"", "none", "disabled"}:
+        return ["search: General web search is disabled because no provider is configured"]
+    return []
