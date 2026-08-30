@@ -3,9 +3,8 @@ from __future__ import annotations
 import contextvars
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
 
 request_id_context: contextvars.ContextVar[str] = contextvars.ContextVar(
     "request_id",
@@ -42,7 +41,7 @@ _STANDARD_ATTRIBUTES = {
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -55,7 +54,7 @@ class JsonFormatter(logging.Formatter):
                 if key not in _STANDARD_ATTRIBUTES and not key.startswith("_")
             }
         )
-        if record.exc_info:
+        if record.exc_info and record.exc_info[0] is not None:
             payload["exception"] = record.exc_info[0].__name__
         return json.dumps(payload, default=str, ensure_ascii=True)
 
