@@ -185,6 +185,7 @@ class WebsiteResearchProvider:
         documents: list[ResearchDocument] = []
         seen: set[str] = set()
         pending = [root_url]
+        last_error: Exception | None = None
 
         while pending and len(documents) < min(budget.max_pages, budget.max_sources):
             url = pending.pop(0)
@@ -198,7 +199,8 @@ class WebsiteResearchProvider:
                 await asyncio.sleep(self._settings.website_rate_limit_seconds)
             try:
                 page = await self._fetcher.fetch(canonical)
-            except (ResearchError, httpx.HTTPError):
+            except (ResearchError, httpx.HTTPError) as exc:
+                last_error = exc
                 continue
             if not page.content_type.startswith("text/html"):
                 continue
@@ -222,6 +224,10 @@ class WebsiteResearchProvider:
                 )
                 if len(pending) < budget.max_pages:
                     pending.extend(urljoin(root_url, segment) for segment in _USEFUL_SEGMENTS)
+        if not documents:
+            raise ResearchError(
+                "Official website research did not return a usable page"
+            ) from last_error
         return documents
 
     async def _load_robots(self, root_url: str) -> RobotFileParser:
