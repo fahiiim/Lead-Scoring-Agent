@@ -106,6 +106,7 @@ class SecEdgarProvider:
             tickers_page = await self._fetcher.fetch(
                 self._tickers_url,
                 allowed_content_types=("application/json", "text/plain"),
+                headers={"User-Agent": self._settings.sec_user_agent},
             )
             records = json.loads(tickers_page.body).values()
             match = next(
@@ -118,6 +119,7 @@ class SecEdgarProvider:
             submission_page = await self._fetcher.fetch(
                 submissions_url,
                 allowed_content_types=("application/json", "text/plain"),
+                headers={"User-Agent": self._settings.sec_user_agent},
             )
             submission = json.loads(submission_page.body)
         except (ResearchError, json.JSONDecodeError, StopIteration):
