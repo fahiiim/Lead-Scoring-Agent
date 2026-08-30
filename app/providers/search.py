@@ -71,7 +71,7 @@ class SearxngSearchProvider:
                         url=item.get("url"),
                         title=item.get("title"),
                         snippet=item.get("content"),
-                        relevance=float(item.get("score", 0.5) or 0.5),
+                        relevance=max(0.0, min(1.0, float(item.get("score", 0.5) or 0.5))),
                     )
                 )
             except (TypeError, ValueError, ValidationError):
