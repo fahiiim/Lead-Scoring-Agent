@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     max_research_steps: int = Field(default=3, ge=1, le=10)
     max_research_sources: int = Field(default=12, ge=1, le=50)
     max_research_pages: int = Field(default=6, ge=1, le=20)
+    research_timeout_seconds: float = Field(default=45.0, gt=1, le=180)
     max_evidence_excerpt_chars: int = Field(default=1_500, ge=200, le=5_000)
     request_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     request_retry_limit: int = Field(default=2, ge=0, le=5)
