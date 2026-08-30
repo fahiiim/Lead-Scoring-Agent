@@ -33,6 +33,16 @@ _USEFUL_SEGMENTS = (
     "careers",
 )
 _SPACE = re.compile(r"\s+")
+_FREE_EMAIL_DOMAINS = {
+    "gmail.com",
+    "googlemail.com",
+    "hotmail.com",
+    "icloud.com",
+    "outlook.com",
+    "proton.me",
+    "protonmail.com",
+    "yahoo.com",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +88,9 @@ class SafeHttpFetcher:
         cache_key = f"page:{current_url}"
         if self._page_cache is not None:
             cached = await self._page_cache.get(cache_key)
-            if cached is not None:
+            if cached is not None and _content_type_allowed(
+                cached.content_type, allowed_content_types
+            ):
                 return cached
         redirects = 0
         while True:
@@ -100,7 +112,7 @@ class SafeHttpFetcher:
                 )
 
             content_type = response.headers.get("content-type", "").split(";", 1)[0]
-            if not any(content_type.casefold().startswith(item) for item in allowed_content_types):
+            if not _content_type_allowed(content_type, allowed_content_types):
                 await response.aclose()
                 raise ResearchError("Public page returned an unsupported content type")
             body = await self._read_bounded(response)
@@ -132,9 +144,15 @@ class SafeHttpFetcher:
 
     async def _read_bounded(self, response: httpx.Response) -> bytes:
         declared_length = response.headers.get("content-length")
-        if declared_length and int(declared_length) > self._settings.max_response_bytes:
-            await response.aclose()
-            raise ResearchError("Public page exceeded the response size limit")
+        if declared_length:
+            try:
+                declared_size = int(declared_length)
+            except ValueError as exc:
+                await response.aclose()
+                raise ResearchError("Public page returned an invalid content length") from exc
+            if declared_size > self._settings.max_response_bytes:
+                await response.aclose()
+                raise ResearchError("Public page exceeded the response size limit")
         chunks: list[bytes] = []
         size = 0
         async for chunk in response.aiter_bytes():
@@ -159,9 +177,10 @@ class WebsiteResearchProvider:
         lead: LeadInput,
         budget: ResearchBudget,
     ) -> list[ResearchDocument]:
-        if lead.website is None:
+        candidate_url = _candidate_website(lead)
+        if candidate_url is None:
             return []
-        root_url = canonicalize_url(str(lead.website))
+        root_url = canonicalize_url(candidate_url)
         robots = await self._load_robots(root_url)
         documents: list[ResearchDocument] = []
         seen: set[str] = set()
@@ -256,3 +275,19 @@ def _rank_useful_links(links: Iterable[str], root_url: str) -> list[str]:
         if score:
             ranked.append((score, canonical))
     return [url for _, url in sorted(ranked, reverse=True)]
+
+
+def _candidate_website(lead: LeadInput) -> str | None:
+    if lead.website is not None:
+        return str(lead.website)
+    if lead.email is None:
+        return None
+    domain = str(lead.email).rsplit("@", 1)[-1].casefold()
+    if domain in _FREE_EMAIL_DOMAINS:
+        return None
+    return f"https://{domain}"
+
+
+def _content_type_allowed(content_type: str, allowed: tuple[str, ...]) -> bool:
+    normalized = content_type.casefold()
+    return any(normalized.startswith(item) for item in allowed)
