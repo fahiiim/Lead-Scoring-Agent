@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     database_auto_create: bool = False
 
     search_provider: str = "none"
+    search_base_url: HttpUrl | None = None
     search_api_key: SecretStr | None = None
     sec_user_agent: str | None = None
 
