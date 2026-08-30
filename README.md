@@ -4,7 +4,7 @@ FastAPI service that researches a submitted person and company, records source-l
 
 ## Core capabilities
 
-- Bounded research across official websites, Wikipedia, optional SEC EDGAR data, and optional SearXNG search
+- Bounded research across official websites, Wikipedia, the Wikidata Wikibase REST API, optional SEC EDGAR data, and optional SearXNG search
 - SSRF-aware URL validation, safe redirects, robots rules, timeouts, retries, rate limits, and response size limits
 - LangChain and OpenAI structured fact extraction with verified, probable, unknown, and conflicting states
 - Configuration-driven weights and HOT, WARM, and COLD thresholds
@@ -75,6 +75,8 @@ Copy `.env.example` to `.env`. Important values include:
 Without an OpenAI key, development mode uses a conservative rule-based extractor and reports that fallback in `research_warnings`.
 
 `SEARCH_PROVIDER=none` disables general web search. Official websites, Wikipedia, and Wikidata still run, and the response reports that general search is not configured. Set `SEARCH_PROVIDER=searxng` with `SEARCH_BASE_URL` to enable a SearXNG instance.
+
+Wikidata research needs no API key. The provider uses entity search to identify bounded company and person candidates, then retrieves structured item data from the public Wikibase REST API.
 
 ## Local setup
 

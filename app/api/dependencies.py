@@ -15,17 +15,14 @@ from app.agents.rule_based import RuleBasedFactExtractor
 from app.core.config import Settings
 from app.db.base import Database
 from app.models.domain import ResearchBundle
-from app.providers.public_data import (
-    SecEdgarProvider,
-    WikidataPublicDataProvider,
-    WikipediaPublicDataProvider,
-)
+from app.providers.public_data import SecEdgarProvider, WikipediaPublicDataProvider
 from app.providers.search import (
     DisabledSearchProvider,
     SearchResearchProvider,
     SearxngSearchProvider,
 )
 from app.providers.website import FetchedPage, SafeHttpFetcher, WebsiteResearchProvider
+from app.providers.wikidata import WikidataPublicDataProvider
 from app.repositories.leads import (
     InMemoryLeadRepository,
     LeadRepository,
