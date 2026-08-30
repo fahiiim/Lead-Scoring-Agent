@@ -8,7 +8,6 @@ from app.api.dependencies import get_lead_service
 from app.schemas.lead import HealthResponse, LeadInput, LeadScoreResponse
 from app.services.lead_service import LeadScoringService
 
-
 router = APIRouter()
 
 
