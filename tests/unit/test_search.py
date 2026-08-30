@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 
 from app.core.config import Settings
-from app.providers.search import SearxngSearchProvider
+from app.core.exceptions import ResearchError
+from app.providers.search import DisabledSearchProvider, SearxngSearchProvider
 from app.providers.website import SafeHttpFetcher
 from app.utils.urls import canonicalize_url
 
@@ -47,3 +49,8 @@ async def test_searxng_provider_parses_mocked_results() -> None:
     assert len(results) == 1
     assert results[0].relevance == 0.8
     await client.aclose()
+
+
+async def test_disabled_search_provider_reports_configuration() -> None:
+    with pytest.raises(ResearchError, match="no provider is configured"):
+        await DisabledSearchProvider().search("Example Corp", 3)
