@@ -11,6 +11,7 @@ from pydantic import (
     Field,
     HttpUrl,
     field_validator,
+    model_validator,
 )
 
 from app.models.domain import Evidence, FactorScore, LeadClassification, LeadFact
@@ -32,6 +33,16 @@ class TargetProfile(BaseModel):
     def normalize_lists(cls, values: list[str]) -> list[str]:
         cleaned = [_WHITESPACE.sub(" ", value).strip() for value in values if value.strip()]
         return list(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def validate_employee_range(self) -> TargetProfile:
+        if (
+            self.min_employees is not None
+            and self.max_employees is not None
+            and self.min_employees > self.max_employees
+        ):
+            raise ValueError("min_employees cannot exceed max_employees")
+        return self
 
 
 class LeadInput(BaseModel):
