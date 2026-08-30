@@ -97,3 +97,8 @@ class ExtractedFactsPayload(BaseModel):
     """Schema used for structured LLM output."""
 
     facts: list[LeadFact] = Field(default_factory=list, max_length=40)
+
+
+class FactExtractionResult(BaseModel):
+    facts: list[LeadFact] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
