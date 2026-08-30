@@ -51,7 +51,14 @@ async def test_openai_extractor_uses_structured_output_and_filters_unknown_ids(
                         status=FactStatus.VERIFIED,
                         confidence=0.9,
                         evidence_ids=["ev_001", "invented"],
-                    )
+                    ),
+                    LeadFact(
+                        field="revenue",
+                        value=1_000_000,
+                        status=FactStatus.VERIFIED,
+                        confidence=0.99,
+                        evidence_ids=["invented"],
+                    ),
                 ]
             )
 
@@ -71,3 +78,6 @@ async def test_openai_extractor_uses_structured_output_and_filters_unknown_ids(
     )
 
     assert result.facts[0].evidence_ids == ["ev_001"]
+    assert result.facts[1].status is FactStatus.PROBABLE
+    assert result.facts[1].confidence == 0.4
+    assert result.facts[1].evidence_ids == []
