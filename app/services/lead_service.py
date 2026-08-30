@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import monotonic
 from uuid import uuid4
 
 from app.agents.extractor import FactExtractor
+from app.core.config import Settings
 from app.core.exceptions import LeadNotFoundError
 from app.models.domain import Evidence, FactStatus, LeadFact
 from app.repositories.leads import LeadRepository
-from app.research.orchestrator import ResearchOrchestrator
+from app.research.base import LeadResearcher
 from app.schemas.lead import LeadInput, LeadScoreResponse
 from app.scoring.engine import ScoringEngine
 from app.scoring.profile import build_scoring_profile
-from app.core.config import Settings
-
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 class LeadScoringService:
     def __init__(
         self,
-        orchestrator: ResearchOrchestrator,
+        orchestrator: LeadResearcher,
         extractor: FactExtractor,
         scoring_engine: ScoringEngine,
         repository: LeadRepository,
@@ -49,9 +48,7 @@ class LeadScoringService:
             bundle.evidence,
             extraction.facts,
         )
-        warnings = list(
-            dict.fromkeys([*bundle.provider_failures, *extraction.warnings])
-        )
+        warnings = list(dict.fromkeys([*bundle.provider_failures, *extraction.warnings]))
         response = LeadScoreResponse(
             lead_id=lead_id,
             score=outcome.score,
@@ -63,7 +60,7 @@ class LeadScoringService:
             facts=extraction.facts,
             sources=bundle.evidence,
             research_warnings=warnings,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         await self._repository.save(lead, response)
         logger.info(
@@ -113,14 +110,7 @@ def calculate_research_confidence(
     ]
     coverage = len({fact.field for fact in established}) / len(important_fields)
     fact_confidence = (
-        sum(fact.confidence for fact in established) / len(established)
-        if established
-        else 0.0
+        sum(fact.confidence for fact in established) / len(established) if established else 0.0
     )
-    confidence = (
-        0.25 * diversity
-        + 0.25 * reliability
-        + 0.25 * coverage
-        + 0.25 * fact_confidence
-    )
+    confidence = 0.25 * diversity + 0.25 * reliability + 0.25 * coverage + 0.25 * fact_confidence
     return round(min(1.0, confidence), 3)
