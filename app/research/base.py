@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.models.domain import ResearchDocument
+from app.models.domain import ResearchBundle, ResearchDocument
 from app.schemas.lead import LeadInput
 
 
@@ -22,3 +22,7 @@ class ResearchProvider(Protocol):
         lead: LeadInput,
         budget: ResearchBudget,
     ) -> list[ResearchDocument]: ...
+
+
+class LeadResearcher(Protocol):
+    async def research(self, lead: LeadInput) -> ResearchBundle: ...
