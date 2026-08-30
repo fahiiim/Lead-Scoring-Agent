@@ -103,3 +103,24 @@ async def test_website_provider_uses_corporate_email_domain() -> None:
     assert len(documents) == 1
     assert str(documents[0].url) == "https://example.com/"
     await client.aclose()
+
+
+async def test_website_provider_reports_blocked_root_page() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            403,
+            headers={"content-type": "text/html"},
+            text="Forbidden",
+        )
+
+    settings = Settings(_env_file=None, request_retry_limit=0)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    fetcher = SafeHttpFetcher(settings, client=client, url_validator=allow_url)
+    provider = WebsiteResearchProvider(fetcher, settings)
+
+    with pytest.raises(ResearchError, match="did not return a usable page"):
+        await provider.research(
+            LeadInput(name="Jane Doe", company="Example Corp", website="example.com"),
+            ResearchBudget(max_sources=2, max_pages=2, max_steps=2),
+        )
+    await client.aclose()
