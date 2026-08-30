@@ -8,8 +8,7 @@ from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 from app.core.exceptions import UnsafeUrlError
 
-
-UrlValidator = Callable[[str], Awaitable[str]]
+type UrlValidator = Callable[[str], Awaitable[str]]
 
 _BLOCKED_HOSTNAMES = {"localhost", "localhost.localdomain", "metadata.google.internal"}
 _ALLOWED_SCHEMES = {"http", "https"}
@@ -66,18 +65,22 @@ def _validate_url_parts(parts: SplitResult, port: int) -> None:
         raise UnsafeUrlError("Only standard HTTP and HTTPS ports are allowed")
 
 
-async def _resolve_addresses(hostname: str, port: int) -> set[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+async def _resolve_addresses(
+    hostname: str, port: int
+) -> set[ipaddress.IPv4Address | ipaddress.IPv6Address]:
     try:
         literal = ipaddress.ip_address(hostname)
         return {literal}
     except ValueError:
         pass
 
-    def resolve() -> list[tuple[object, ...]]:
-        return socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
-
     try:
-        records = await asyncio.to_thread(resolve)
+        records = await asyncio.to_thread(
+            socket.getaddrinfo,
+            hostname,
+            port,
+            type=socket.SOCK_STREAM,
+        )
     except socket.gaierror as exc:
         raise UnsafeUrlError("URL hostname could not be resolved") from exc
-    return {ipaddress.ip_address(record[4][0]) for record in records}
+    return {ipaddress.ip_address(str(record[4][0])) for record in records}
