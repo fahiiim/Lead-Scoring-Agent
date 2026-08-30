@@ -16,7 +16,6 @@ from app.models.domain import (
 )
 from app.schemas.lead import LeadInput
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -73,9 +72,7 @@ class OpenAIFactExtractor:
         valid_ids = {item.id for item in evidence}
         facts = [
             fact.model_copy(
-                update={
-                    "evidence_ids": [item for item in fact.evidence_ids if item in valid_ids]
-                }
+                update={"evidence_ids": [item for item in fact.evidence_ids if item in valid_ids]}
             )
             for fact in payload.facts
         ]
