@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.exceptions import PersistenceError
 from app.db.models import (
@@ -47,10 +47,8 @@ class SqlAlchemyLeadRepository:
     def __init__(
         self,
         session_factory: async_sessionmaker[AsyncSession],
-        engine: AsyncEngine,
     ) -> None:
         self._session_factory = session_factory
-        self._engine = engine
 
     async def save(self, lead: LeadInput, result: LeadScoreResponse) -> None:
         session_id = f"rs_{uuid4().hex}"
@@ -129,6 +127,3 @@ class SqlAlchemyLeadRepository:
         except SQLAlchemyError as exc:
             raise PersistenceError("Lead result could not be retrieved") from exc
         return LeadScoreResponse.model_validate(payload) if payload else None
-
-    async def close(self) -> None:
-        await self._engine.dispose()
