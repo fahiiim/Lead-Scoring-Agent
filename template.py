@@ -61,6 +61,7 @@ FILES = (
     "app/providers/public_data.py",
     "app/providers/search.py",
     "app/providers/website.py",
+    "app/providers/wikidata.py",
     "app/repositories/__init__.py",
     "app/repositories/leads.py",
     "app/research/__init__.py",
