@@ -98,9 +98,12 @@ class ResearchOrchestrator:
             terms=(lead.name, lead.company, lead.designation or "", lead.industry or ""),
             limit=self._settings.max_evidence_excerpt_chars,
         )
-        digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        content_digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        evidence_digest = hashlib.sha256(
+            f"{canonicalize_url(str(document.url))}\n{normalized}".encode()
+        ).hexdigest()
         return Evidence(
-            id=f"ev_{digest[:16]}",
+            id=f"ev_{evidence_digest[:16]}",
             source_url=document.url,
             source_type=document.source_type,
             provider=document.provider,
@@ -108,7 +111,7 @@ class ResearchOrchestrator:
             excerpt=excerpt,
             relevance=document.relevance,
             reliability=document.reliability,
-            content_digest=digest,
+            content_digest=content_digest,
         )
 
     @staticmethod
@@ -118,6 +121,7 @@ class ResearchOrchestrator:
             "company": lead.company.casefold(),
             "website": str(lead.website) if lead.website else None,
             "designation": lead.designation.casefold() if lead.designation else None,
+            "industry": lead.industry.casefold() if lead.industry else None,
         }
         digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode("utf-8")).hexdigest()
         return f"research:{digest}"
