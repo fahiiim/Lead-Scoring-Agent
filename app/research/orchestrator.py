@@ -14,7 +14,6 @@ from app.schemas.lead import LeadInput
 from app.utils.cache import Cache
 from app.utils.urls import canonicalize_url
 
-
 logger = logging.getLogger(__name__)
 _SPACE = re.compile(r"\s+")
 
@@ -120,9 +119,7 @@ class ResearchOrchestrator:
             "website": str(lead.website) if lead.website else None,
             "designation": lead.designation.casefold() if lead.designation else None,
         }
-        digest = hashlib.sha256(
-            json.dumps(identity, sort_keys=True).encode("utf-8")
-        ).hexdigest()
+        digest = hashlib.sha256(json.dumps(identity, sort_keys=True).encode("utf-8")).hexdigest()
         return f"research:{digest}"
 
 
