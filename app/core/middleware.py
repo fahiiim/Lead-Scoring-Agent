@@ -7,10 +7,9 @@ from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
-from app.core.exceptions import RequestTooLargeError
 from app.core.logging import request_id_context
 
 
@@ -62,5 +61,14 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             except ValueError:
                 exceeds_limit = True
             if exceeds_limit:
-                raise RequestTooLargeError("Request body exceeds the configured size limit")
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "error": {
+                            "code": "request_too_large",
+                            "message": "Request body exceeds the configured size limit",
+                            "details": {},
+                        }
+                    },
+                )
         return await call_next(request)
