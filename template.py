@@ -47,6 +47,7 @@ FILES = (
     "app/api/v1/routes.py",
     "app/agents/__init__.py",
     "app/agents/extractor.py",
+    "app/agents/rule_based.py",
     "app/core/__init__.py",
     "app/core/config.py",
     "app/core/exceptions.py",
