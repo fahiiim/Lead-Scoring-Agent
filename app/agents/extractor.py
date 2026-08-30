@@ -12,6 +12,7 @@ from app.models.domain import (
     Evidence,
     ExtractedFactsPayload,
     FactExtractionResult,
+    FactStatus,
     LeadFact,
 )
 from app.schemas.lead import LeadInput
@@ -70,11 +71,9 @@ class OpenAIFactExtractor:
             logger.warning("OpenAI structured extraction failed", exc_info=exc)
             raise ExtractionError("Structured fact extraction failed") from exc
         valid_ids = {item.id for item in evidence}
+        reliability = {item.id: item.reliability for item in evidence}
         facts = [
-            fact.model_copy(
-                update={"evidence_ids": [item for item in fact.evidence_ids if item in valid_ids]}
-            )
-            for fact in payload.facts
+            _enforce_evidence_constraints(fact, valid_ids, reliability) for fact in payload.facts
         ]
         return FactExtractionResult(facts=_deduplicate_facts(facts))
 
@@ -117,6 +116,44 @@ def _deduplicate_facts(facts: list[LeadFact]) -> list[LeadFact]:
         if current is None or fact.confidence > current.confidence:
             selected[fact.field] = fact
     return list(selected.values())
+
+
+def _enforce_evidence_constraints(
+    fact: LeadFact,
+    valid_ids: set[str],
+    reliability: dict[str, float],
+) -> LeadFact:
+    evidence_ids = [item for item in fact.evidence_ids if item in valid_ids]
+    if fact.status is FactStatus.UNKNOWN:
+        return fact.model_copy(
+            update={
+                "value": None,
+                "confidence": min(fact.confidence, 0.2),
+                "evidence_ids": [],
+            }
+        )
+
+    status = fact.status
+    confidence = fact.confidence
+    alternatives = fact.alternatives
+    rationale = fact.rationale
+    if not evidence_ids:
+        if status in {FactStatus.VERIFIED, FactStatus.CONFLICTING}:
+            status = FactStatus.PROBABLE
+            alternatives = []
+        confidence = min(confidence, 0.4)
+        rationale = "No valid evidence citation was supplied; the claim remains form-derived."
+    else:
+        confidence = min(confidence, max(reliability[item] for item in evidence_ids) + 0.05)
+    return fact.model_copy(
+        update={
+            "status": status,
+            "confidence": confidence,
+            "evidence_ids": evidence_ids,
+            "alternatives": alternatives,
+            "rationale": rationale,
+        }
+    )
 
 
 _EXTRACTION_INSTRUCTIONS = (
