@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import httpx
+from fastapi import FastAPI
 
-from app.agents.extractor import FactExtractor
 from app.api.dependencies import ApplicationContainer
 from app.core.config import Settings
 from app.main import create_app
@@ -90,7 +90,7 @@ def build_test_app(
     evidence_factory: Callable[..., Evidence],
     *,
     max_request_bytes: int = 100_000,
-) -> object:
+) -> FastAPI:
     settings = Settings(
         _env_file=None,
         max_request_bytes=max_request_bytes,
@@ -101,8 +101,8 @@ def build_test_app(
         repository = InMemoryLeadRepository()
         fetcher = SafeHttpFetcher(runtime_settings)
         service = LeadScoringService(
-            FakeOrchestrator(evidence_factory()),  # type: ignore[arg-type]
-            StaticExtractor(),  # type: ignore[arg-type]
+            FakeOrchestrator(evidence_factory()),
+            StaticExtractor(),
             ScoringEngine(),
             repository,
             runtime_settings,
@@ -116,8 +116,8 @@ async def test_score_and_retrieve_lead(
     evidence_factory: Callable[..., Evidence],
 ) -> None:
     application = build_test_app(evidence_factory)
-    async with application.router.lifespan_context(application):  # type: ignore[attr-defined]
-        transport = httpx.ASGITransport(app=application)  # type: ignore[arg-type]
+    async with application.router.lifespan_context(application):
+        transport = httpx.ASGITransport(app=application)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             health = await client.get("/health")
             scored = await client.post(
@@ -145,13 +145,11 @@ async def test_validation_and_not_found_responses(
     evidence_factory: Callable[..., Evidence],
 ) -> None:
     application = build_test_app(evidence_factory)
-    async with application.router.lifespan_context(application):  # type: ignore[attr-defined]
-        transport = httpx.ASGITransport(app=application)  # type: ignore[arg-type]
+    async with application.router.lifespan_context(application):
+        transport = httpx.ASGITransport(app=application)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             invalid = await client.post("/api/v1/leads/score", json={"name": "Jane Doe"})
-            missing = await client.get(
-                "/api/v1/leads/lead_0123456789abcdef0123456789abcdef"
-            )
+            missing = await client.get("/api/v1/leads/lead_0123456789abcdef0123456789abcdef")
 
     assert invalid.status_code == 422
     assert invalid.json()["error"]["code"] == "validation_error"
@@ -161,8 +159,8 @@ async def test_validation_and_not_found_responses(
 
 async def test_request_size_limit(evidence_factory: Callable[..., Evidence]) -> None:
     application = build_test_app(evidence_factory, max_request_bytes=1_024)
-    async with application.router.lifespan_context(application):  # type: ignore[attr-defined]
-        transport = httpx.ASGITransport(app=application)  # type: ignore[arg-type]
+    async with application.router.lifespan_context(application):
+        transport = httpx.ASGITransport(app=application)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/api/v1/leads/score",
