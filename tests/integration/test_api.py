@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 
 import httpx
 from fastapi import FastAPI
@@ -165,6 +165,25 @@ async def test_request_size_limit(evidence_factory: Callable[..., Evidence]) -> 
             response = await client.post(
                 "/api/v1/leads/score",
                 content="x" * 1_025,
+                headers={"content-type": "application/json"},
+            )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "request_too_large"
+
+
+async def test_streamed_request_size_limit(evidence_factory: Callable[..., Evidence]) -> None:
+    async def oversized_body() -> AsyncIterator[bytes]:
+        yield b"x" * 600
+        yield b"x" * 600
+
+    application = build_test_app(evidence_factory, max_request_bytes=1_024)
+    async with application.router.lifespan_context(application):
+        transport = httpx.ASGITransport(app=application)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/leads/score",
+                content=oversized_body(),
                 headers={"content-type": "application/json"},
             )
 
