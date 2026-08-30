@@ -58,7 +58,9 @@ class ScoringEngine:
             sum(item.confidence * item.max_score for item in factors) / 100,
             3,
         )
-        strongest = max(factors, key=lambda item: item.score / item.max_score if item.max_score else 0)
+        strongest = max(
+            factors, key=lambda item: item.score / item.max_score if item.max_score else 0
+        )
         summary = (
             f"{classification.value} lead with the strongest contribution from "
             f"{strongest.name.lower()}. The score is deterministic and evidence confidence "
@@ -89,7 +91,9 @@ class ScoringEngine:
         if fact is None or not isinstance(fact.value, str):
             return 0.0, "The current role could not be established.", 0.0, []
         title = fact.value.casefold()
-        if any(term in title for term in ("founder", "owner", "chief executive", "ceo", "president")):
+        if any(
+            term in title for term in ("founder", "owner", "chief executive", "ceo", "president")
+        ):
             ratio, level = 1.0, "top executive"
         elif any(term in title for term in ("chief ", "cfo", "cto", "coo", "cmo", "cio")):
             ratio, level = 0.9, "C-level executive"
@@ -103,7 +107,12 @@ class ScoringEngine:
             ratio, level = 0.1, "role with unclear purchasing authority"
 
         company_size = facts.get("company_employee_count")
-        if ratio >= 0.9 and company_size and isinstance(company_size.value, int) and company_size.value <= 2:
+        if (
+            ratio >= 0.9
+            and company_size
+            and isinstance(company_size.value, int)
+            and company_size.value <= 2
+        ):
             ratio *= 0.65
             level = f"{level} at a very small company"
         if lead.target_profile and lead.target_profile.relevant_titles:
@@ -170,7 +179,10 @@ class ScoringEngine:
             return 0.0, "Company industry is unknown.", 0.0, []
         industry = fact.value.casefold()
         if not profile.target_industries:
-            ratio, reason = 0.6, "No target industries are configured, so known industry fit is neutral."
+            ratio, reason = (
+                0.6,
+                "No target industries are configured, so known industry fit is neutral.",
+            )
         else:
             matches = any(
                 target in industry or industry in target for target in profile.target_industries
@@ -200,7 +212,12 @@ class ScoringEngine:
                 fact.evidence_ids,
             )
         title_fact = facts.get("designation")
-        if lead.target_profile and lead.target_profile.relevant_titles and title_fact and isinstance(title_fact.value, str):
+        if (
+            lead.target_profile
+            and lead.target_profile.relevant_titles
+            and title_fact
+            and isinstance(title_fact.value, str)
+        ):
             matches = any(
                 item.casefold() in title_fact.value.casefold()
                 for item in lead.target_profile.relevant_titles
