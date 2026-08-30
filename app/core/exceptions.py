@@ -38,3 +38,8 @@ class PersistenceError(ApplicationError):
 class UnsafeUrlError(ApplicationError):
     status_code = 400
     code = "unsafe_url"
+
+
+class RequestTooLargeError(ApplicationError):
+    status_code = 413
+    code = "request_too_large"
