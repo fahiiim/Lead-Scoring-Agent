@@ -33,7 +33,7 @@ class DisabledSearchProvider:
 
     async def search(self, query: str, limit: int) -> list[SearchResult]:
         del query, limit
-        return []
+        raise ResearchError("General web search is disabled because no provider is configured")
 
 
 class SearxngSearchProvider:
@@ -61,8 +61,8 @@ class SearxngSearchProvider:
                 headers=headers,
             )
             payload = json.loads(response.body)
-        except (ResearchError, json.JSONDecodeError):
-            return []
+        except (ResearchError, json.JSONDecodeError) as exc:
+            raise ResearchError("Configured search provider request failed") from exc
         results: list[SearchResult] = []
         for item in payload.get("results", [])[:limit]:
             try:
