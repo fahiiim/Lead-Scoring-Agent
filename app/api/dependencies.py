@@ -10,10 +10,11 @@ from app.agents.extractor import (
     FactExtractor,
     FallbackFactExtractor,
     OpenAIFactExtractor,
-    RuleBasedFactExtractor,
 )
+from app.agents.rule_based import RuleBasedFactExtractor
 from app.core.config import Settings
 from app.db.base import Database
+from app.models.domain import ResearchBundle
 from app.providers.public_data import SecEdgarProvider, WikipediaPublicDataProvider
 from app.providers.search import (
     DisabledSearchProvider,
@@ -26,12 +27,11 @@ from app.repositories.leads import (
     LeadRepository,
     SqlAlchemyLeadRepository,
 )
+from app.research.base import ResearchProvider
 from app.research.orchestrator import ResearchOrchestrator
-from app.services.lead_service import LeadScoringService
 from app.scoring.engine import ScoringEngine
-from app.models.domain import ResearchBundle
+from app.services.lead_service import LeadScoringService
 from app.utils.cache import MemoryTTLCache
-
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ async def build_container(settings: Settings) -> ApplicationContainer:
     )
     fetcher = SafeHttpFetcher(settings, page_cache=page_cache)
     search_provider = _build_search_provider(settings, fetcher)
-    providers = [
+    providers: list[ResearchProvider] = [
         WebsiteResearchProvider(fetcher, settings),
         WikipediaPublicDataProvider(fetcher),
         SecEdgarProvider(fetcher, settings),
