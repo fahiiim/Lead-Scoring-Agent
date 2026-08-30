@@ -15,7 +15,7 @@ async def test_sqlalchemy_repository_round_trip(
 ) -> None:
     database = Database("sqlite:///:memory:")
     await database.create_schema()
-    repository = SqlAlchemyLeadRepository(database.session_factory, database.engine)
+    repository = SqlAlchemyLeadRepository(database.session_factory)
     lead = LeadInput(name="Jane Doe", company="Example Corp", designation="CEO")
     result = LeadScoreResponse(
         lead_id="lead_0123456789abcdef0123456789abcdef",
