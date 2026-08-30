@@ -15,7 +15,11 @@ from app.agents.rule_based import RuleBasedFactExtractor
 from app.core.config import Settings
 from app.db.base import Database
 from app.models.domain import ResearchBundle
-from app.providers.public_data import SecEdgarProvider, WikipediaPublicDataProvider
+from app.providers.public_data import (
+    SecEdgarProvider,
+    WikidataPublicDataProvider,
+    WikipediaPublicDataProvider,
+)
 from app.providers.search import (
     DisabledSearchProvider,
     SearchResearchProvider,
@@ -63,9 +67,12 @@ async def build_container(settings: Settings) -> ApplicationContainer:
     providers: list[ResearchProvider] = [
         WebsiteResearchProvider(fetcher, settings),
         WikipediaPublicDataProvider(fetcher),
-        SecEdgarProvider(fetcher, settings),
-        SearchResearchProvider(search_provider),
+        WikidataPublicDataProvider(fetcher),
     ]
+    if not isinstance(search_provider, DisabledSearchProvider):
+        providers.append(SearchResearchProvider(search_provider))
+    if settings.sec_user_agent:
+        providers.append(SecEdgarProvider(fetcher, settings))
     orchestrator = ResearchOrchestrator(providers, research_cache, settings)
     extractor = _build_extractor(settings)
 
