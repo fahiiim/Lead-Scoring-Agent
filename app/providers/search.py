@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import json
 from typing import Protocol
 from urllib.parse import quote
-
-import json
 
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
