@@ -38,4 +38,3 @@ class PersistenceError(ApplicationError):
 class UnsafeUrlError(ApplicationError):
     status_code = 400
     code = "unsafe_url"
-
