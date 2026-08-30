@@ -2,6 +2,7 @@ services:
   - type: web
     name: ai-lead-scoring-agent
     runtime: docker
+    plan: 0.5c-512mb
     healthCheckPath: /health
     preDeployCommand: alembic upgrade head
     envVars:
@@ -22,6 +23,6 @@ services:
 
 databases:
   - name: lead-scoring-postgres
-    plan: basic-256mb
+    plan: 0.1c-256mb
     databaseName: lead_scoring
     user: lead_scoring
