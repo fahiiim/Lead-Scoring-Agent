@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     target_min_employees: int | None = Field(default=None, ge=1)
     target_max_employees: int | None = Field(default=None, ge=1)
 
+    @field_validator("debug", mode="before")
+    @classmethod
+    def tolerate_common_debug_environment_values(cls, value: object) -> object:
+        if isinstance(value, str) and value.casefold() in {"release", "prod", "production"}:
+            return False
+        return value
+
     @model_validator(mode="after")
     def validate_scoring_configuration(self) -> Settings:
         weights = (
@@ -86,9 +93,7 @@ class Settings(BaseSettings):
     @property
     def parsed_target_industries(self) -> tuple[str, ...]:
         return tuple(
-            item.strip().casefold()
-            for item in self.target_industries.split(",")
-            if item.strip()
+            item.strip().casefold() for item in self.target_industries.split(",") if item.strip()
         )
 
 
