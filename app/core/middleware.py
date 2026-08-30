@@ -8,7 +8,7 @@ from uuid import uuid4
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.logging import request_id_context
 
@@ -43,31 +43,66 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             request_id_context.reset(token)
 
 
-class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+class RequestSizeLimitMiddleware:
     def __init__(self, app: ASGIApp, max_bytes: int) -> None:
-        super().__init__(app)
+        self._app = app
         self._max_bytes = max_bytes
 
-    async def dispatch(
+    async def __call__(
         self,
-        request: Request,
-        call_next: RequestResponseEndpoint,
-    ) -> Response:
-        content_length = request.headers.get("content-length")
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
+        content_length = headers.get(b"content-length", b"").decode("ascii", errors="ignore")
         if content_length:
             try:
                 exceeds_limit = int(content_length) > self._max_bytes
             except ValueError:
                 exceeds_limit = True
             if exceeds_limit:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "error": {
-                            "code": "request_too_large",
-                            "message": "Request body exceeds the configured size limit",
-                            "details": {},
-                        }
-                    },
-                )
-        return await call_next(request)
+                await _request_too_large_response()(scope, receive, send)
+                return
+
+        buffered: list[Message] = []
+        received_bytes = 0
+        while True:
+            message = await receive()
+            buffered.append(message)
+            if message["type"] == "http.disconnect":
+                break
+            received_bytes += len(message.get("body", b""))
+            if received_bytes > self._max_bytes:
+                await _request_too_large_response()(scope, receive, send)
+                return
+            if not message.get("more_body", False):
+                break
+
+        message_index = 0
+
+        async def replay_receive() -> Message:
+            nonlocal message_index
+            if message_index < len(buffered):
+                message = buffered[message_index]
+                message_index += 1
+                return message
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        await self._app(scope, replay_receive, send)
+
+
+def _request_too_large_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=413,
+        content={
+            "error": {
+                "code": "request_too_large",
+                "message": "Request body exceeds the configured size limit",
+                "details": {},
+            }
+        },
+    )
