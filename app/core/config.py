@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     search_api_key: SecretStr | None = None
     sec_user_agent: str | None = None
 
-    max_research_steps: int = Field(default=4, ge=1, le=10)
+    max_research_steps: int = Field(default=5, ge=1, le=10)
     max_research_sources: int = Field(default=12, ge=1, le=50)
     max_research_pages: int = Field(default=6, ge=1, le=20)
     research_timeout_seconds: float = Field(default=45.0, gt=1, le=180)
@@ -47,7 +47,9 @@ class Settings(BaseSettings):
     max_request_bytes: int = Field(default=100_000, ge=1_024, le=2_000_000)
     website_rate_limit_seconds: float = Field(default=0.25, ge=0, le=10)
     cache_ttl_seconds: int = Field(default=21_600, ge=60, le=604_800)
-    outbound_user_agent: str = "LeadScoringAgent/1.0 (+public-research)"
+    outbound_user_agent: str = (
+        "LeadScoringAgent/1.0 (https://github.com/fahiiim/Lead-Scoring-Agent; public research)"
+    )
 
     hot_score_threshold: int = Field(default=80, ge=1, le=100)
     warm_score_threshold: int = Field(default=50, ge=0, le=99)
@@ -60,6 +62,22 @@ class Settings(BaseSettings):
     target_industries: str = ""
     target_min_employees: int | None = Field(default=None, ge=1)
     target_max_employees: int | None = Field(default=None, ge=1)
+
+    @field_validator(
+        "openai_api_key",
+        "database_url",
+        "search_base_url",
+        "search_api_key",
+        "sec_user_agent",
+        "target_min_employees",
+        "target_max_employees",
+        mode="before",
+    )
+    @classmethod
+    def blank_optional_values_are_unset(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("debug", mode="before")
     @classmethod
