@@ -78,3 +78,28 @@ async def test_fetcher_rejects_oversized_mocked_response() -> None:
     with pytest.raises(ResearchError, match="response size limit"):
         await fetcher.fetch("https://example.com/")
     await client.aclose()
+
+
+async def test_website_provider_uses_corporate_email_domain() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404, headers={"content-type": "text/plain"})
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html"},
+            text="<html><p>Example Corp public company page.</p></html>",
+        )
+
+    settings = Settings(_env_file=None, website_rate_limit_seconds=0)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    fetcher = SafeHttpFetcher(settings, client=client, url_validator=allow_url)
+    provider = WebsiteResearchProvider(fetcher, settings)
+
+    documents = await provider.research(
+        LeadInput(name="Jane Doe", company="Example Corp", email="jane@example.com"),
+        ResearchBudget(max_sources=1, max_pages=1, max_steps=1),
+    )
+
+    assert len(documents) == 1
+    assert str(documents[0].url) == "https://example.com/"
+    await client.aclose()
