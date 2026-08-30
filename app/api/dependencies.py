@@ -77,7 +77,6 @@ async def build_container(settings: Settings) -> ApplicationContainer:
             await database.create_schema()
         repository = SqlAlchemyLeadRepository(
             database.session_factory,
-            database.engine,
         )
     else:
         repository = InMemoryLeadRepository()
