@@ -15,7 +15,6 @@ from app.core.exceptions import ApplicationError
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware, RequestSizeLimitMiddleware
 
-
 logger = logging.getLogger(__name__)
 ContainerFactory = Callable[[Settings], Awaitable[ApplicationContainer]]
 
