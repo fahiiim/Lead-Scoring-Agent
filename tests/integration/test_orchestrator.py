@@ -58,6 +58,7 @@ async def test_orchestrator_deduplicates_records_failures_and_caches() -> None:
         _env_file=None,
         max_research_steps=3,
         max_research_sources=5,
+        search_provider="test",
     )
     cache = MemoryTTLCache[ResearchBundle](60)
     orchestrator = ResearchOrchestrator([first, failed, public], cache, settings)
@@ -79,7 +80,12 @@ async def test_orchestrator_respects_source_limit() -> None:
         "many",
         [document(f"https://example.com/page-{index}") for index in range(5)],
     )
-    settings = Settings(_env_file=None, max_research_sources=2, max_research_steps=1)
+    settings = Settings(
+        _env_file=None,
+        max_research_sources=2,
+        max_research_steps=1,
+        search_provider="test",
+    )
     orchestrator = ResearchOrchestrator(
         [provider],
         MemoryTTLCache[ResearchBundle](60),
