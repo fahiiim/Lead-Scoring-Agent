@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from typing import Protocol
+from urllib.parse import quote
 
-from pydantic import BaseModel, Field, HttpUrl
+import json
 
+from pydantic import BaseModel, Field, HttpUrl, ValidationError
+
+from app.core.exceptions import ResearchError
 from app.models.domain import ResearchDocument
+from app.providers.website import SafeHttpFetcher
 from app.research.base import ResearchBudget
 from app.schemas.lead import LeadInput
 
@@ -30,6 +35,49 @@ class DisabledSearchProvider:
     async def search(self, query: str, limit: int) -> list[SearchResult]:
         del query, limit
         return []
+
+
+class SearxngSearchProvider:
+    """Search through a user-configured SearXNG instance using its JSON API."""
+
+    name = "searxng"
+
+    def __init__(
+        self,
+        base_url: str,
+        fetcher: SafeHttpFetcher,
+        api_key: str | None = None,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._fetcher = fetcher
+        self._api_key = api_key
+
+    async def search(self, query: str, limit: int) -> list[SearchResult]:
+        url = f"{self._base_url}/search?q={quote(query)}&format=json"
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else None
+        try:
+            response = await self._fetcher.fetch(
+                url,
+                allowed_content_types=("application/json", "text/json"),
+                headers=headers,
+            )
+            payload = json.loads(response.body)
+        except (ResearchError, json.JSONDecodeError):
+            return []
+        results: list[SearchResult] = []
+        for item in payload.get("results", [])[:limit]:
+            try:
+                results.append(
+                    SearchResult(
+                        url=item.get("url"),
+                        title=item.get("title"),
+                        snippet=item.get("content"),
+                        relevance=float(item.get("score", 0.5) or 0.5),
+                    )
+                )
+            except (TypeError, ValueError, ValidationError):
+                continue
+        return results
 
 
 class SearchResearchProvider:
