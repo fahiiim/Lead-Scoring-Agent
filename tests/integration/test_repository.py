@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from app.db.base import Database
-from app.models.domain import LeadClassification
+from app.models.domain import Evidence, LeadClassification, LeadFact
 from app.repositories.leads import SqlAlchemyLeadRepository
 from app.schemas.lead import LeadInput, LeadScoreResponse
 
 
 async def test_sqlalchemy_repository_round_trip(
-    evidence_factory: object,
-    fact_factory: object,
+    evidence_factory: Callable[..., Evidence],
+    fact_factory: Callable[..., LeadFact],
 ) -> None:
     database = Database("sqlite:///:memory:")
     await database.create_schema()
@@ -24,9 +25,9 @@ async def test_sqlalchemy_repository_round_trip(
         scoring_confidence=0.9,
         summary="Qualified lead.",
         factors=[],
-        facts=[fact_factory()],  # type: ignore[operator]
-        sources=[evidence_factory()],  # type: ignore[operator]
-        created_at=datetime.now(timezone.utc),
+        facts=[fact_factory()],
+        sources=[evidence_factory()],
+        created_at=datetime.now(UTC),
     )
 
     await repository.save(lead, result)
