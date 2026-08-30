@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from app.agents.extractor import OpenAIFactExtractor, RuleBasedFactExtractor
+from app.agents.extractor import OpenAIFactExtractor
+from app.agents.rule_based import RuleBasedFactExtractor
 from app.core.config import Settings
 from app.models.domain import Evidence, ExtractedFactsPayload, FactStatus, LeadFact
 from app.schemas.lead import LeadInput
