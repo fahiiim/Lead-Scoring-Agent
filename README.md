@@ -74,6 +74,8 @@ Copy `.env.example` to `.env`. Important values include:
 
 Without an OpenAI key, development mode uses a conservative rule-based extractor and reports that fallback in `research_warnings`.
 
+`SEARCH_PROVIDER=none` disables general web search. Official websites, Wikipedia, and Wikidata still run, and the response reports that general search is not configured. Set `SEARCH_PROVIDER=searxng` with `SEARCH_BASE_URL` to enable a SearXNG instance.
+
 ## Local setup
 
 ```bash
