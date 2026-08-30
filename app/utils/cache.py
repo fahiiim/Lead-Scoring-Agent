@@ -3,25 +3,22 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeVar
+from typing import Protocol
 
 
-T = TypeVar("T")
-
-
-class Cache(Protocol, Generic[T]):
+class Cache[T](Protocol):
     async def get(self, key: str) -> T | None: ...
 
     async def set(self, key: str, value: T, ttl_seconds: int | None = None) -> None: ...
 
 
 @dataclass(slots=True)
-class _Entry(Generic[T]):
+class _Entry[T]:
     value: T
     expires_at: float
 
 
-class MemoryTTLCache(Generic[T]):
+class MemoryTTLCache[T]:
     """Small process-local cache with lazy expiry and concurrency protection."""
 
     def __init__(self, default_ttl_seconds: int, max_entries: int = 1_000) -> None:
