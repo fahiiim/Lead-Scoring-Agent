@@ -15,6 +15,7 @@ from app.core.exceptions import ResearchError
 from app.models.domain import ResearchDocument
 from app.research.base import ResearchBudget
 from app.schemas.lead import LeadInput
+from app.utils.cache import Cache
 from app.utils.urls import UrlValidator, canonicalize_url, validate_public_url
 
 
@@ -51,10 +52,12 @@ class SafeHttpFetcher:
         *,
         client: httpx.AsyncClient | None = None,
         url_validator: UrlValidator = validate_public_url,
+        page_cache: Cache[FetchedPage] | None = None,
     ) -> None:
         self._settings = settings
         self._validator = url_validator
         self._owns_client = client is None
+        self._page_cache = page_cache
         self._client = client or httpx.AsyncClient(
             timeout=settings.request_timeout_seconds,
             headers={"User-Agent": settings.outbound_user_agent},
@@ -70,11 +73,17 @@ class SafeHttpFetcher:
         url: str,
         *,
         allowed_content_types: tuple[str, ...] = ("text/html", "text/plain"),
+        headers: dict[str, str] | None = None,
     ) -> FetchedPage:
         current_url = await self._validator(url)
+        cache_key = f"page:{current_url}"
+        if self._page_cache is not None:
+            cached = await self._page_cache.get(cache_key)
+            if cached is not None:
+                return cached
         redirects = 0
         while True:
-            response = await self._request_with_retries(current_url)
+            response = await self._request_with_retries(current_url, headers=headers)
             if response.status_code in {301, 302, 303, 307, 308}:
                 location = response.headers.get("location")
                 await response.aclose()
@@ -96,13 +105,21 @@ class SafeHttpFetcher:
                 await response.aclose()
                 raise ResearchError("Public page returned an unsupported content type")
             body = await self._read_bounded(response)
-            return FetchedPage(url=current_url, content_type=content_type, body=body)
+            result = FetchedPage(url=current_url, content_type=content_type, body=body)
+            if self._page_cache is not None:
+                await self._page_cache.set(cache_key, result)
+            return result
 
-    async def _request_with_retries(self, url: str) -> httpx.Response:
+    async def _request_with_retries(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None,
+    ) -> httpx.Response:
         last_error: Exception | None = None
         for attempt in range(self._settings.request_retry_limit + 1):
             try:
-                request = self._client.build_request("GET", url)
+                request = self._client.build_request("GET", url, headers=headers)
                 response = await self._client.send(request, stream=True)
                 if response.status_code < 500 or attempt == self._settings.request_retry_limit:
                     return response
