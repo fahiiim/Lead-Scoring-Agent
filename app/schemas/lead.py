@@ -15,7 +15,6 @@ from pydantic import (
 
 from app.models.domain import Evidence, FactorScore, LeadClassification, LeadFact
 
-
 _WHITESPACE = re.compile(r"\s+")
 
 
@@ -31,11 +30,7 @@ class TargetProfile(BaseModel):
     @field_validator("industries", "relevant_titles", "keywords")
     @classmethod
     def normalize_lists(cls, values: list[str]) -> list[str]:
-        cleaned = [
-            _WHITESPACE.sub(" ", value).strip()
-            for value in values
-            if value.strip()
-        ]
+        cleaned = [_WHITESPACE.sub(" ", value).strip() for value in values if value.strip()]
         return list(dict.fromkeys(cleaned))
 
 
